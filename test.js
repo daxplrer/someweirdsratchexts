@@ -1,45 +1,52 @@
+
 var __OPENNOTIFY_SCRATCHEXT__DEFAULTCONF = {
     point: 'http://open-notify.org',
-    fdatas:{
-        stationloc:undefined,
-        astronauts:undefined
+    fdatas: {
+        stationloc: undefined,
+        astronauts: undefined
+    },
+    internal: {
+        fdataFallback: { message: "error" }
     }
-}
+};
 Object.freeze(__OPENNOTIFY_SCRATCHEXT__DEFAULTCONF);
 (function (Scratch) {
     'use strict';
-    const vm = Scratch.vm;
-    const rt = vm.runtime
-    let apistore = __OPENNOTIFY_SCRATCHEXT__DEFAULTCONF
     if (!Scratch.extensions.unsandboxed) {
         throw new Error('run this on unsandboxed mode and make sure you are loading it in turbowarp-based scratch');
     }
-    
-
-    class AstronautsApi {
-        constructor(){
-            rt.on('BEFORE_EXECUTE', ()=>apistore = __OPENNOTIFY_SCRATCHEXT__DEFAULTCONF)
+    const vm = Scratch.vm;
+    const rt = vm.runtime
+    apistore = __OPENNOTIFY_SCRATCHEXT__DEFAULTCONF
+    class OpenNotifyApi {
+        constructor() {
+            rt.on('BEFORE_EXECUTE', () => apistore = __OPENNOTIFY_SCRATCHEXT__DEFAULTCONF)
         }
         getInfo() {
             return {
-                id: 'opennotifyapi',
-                name: 'Open Notify Astronauts Api',
+                id: 'opennotifyapiext',
+                name: 'Open Notify Api',
                 blocks: [
-                    {
-                        opcode: 'fetchstationloc',
-                        blockType: Scratch.BlockType.COMMAND,
-                        text: 'Fetch station location'
-                    },
                     {
                         opcode: 'setwebpoint',
                         blockType: Scratch.BlockType.COMMAND,
                         text: 'Set web starting point to',
                         arguments: {
                             SPOINT: {
-                              type: Scratch.ArgumentType.STRING,
-                              menu: 'Starting point'
+                                type: Scratch.ArgumentType.STRING,
+                                defaultValue: __OPENNOTIFY_SCRATCHEXT__DEFAULTCONF.point
                             }
                         }
+                    },
+                    {
+                        opcode: 'fetchstationloc',
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: 'Fetch station location'
+                    },
+                    {
+                        opcode: 'fetchstationlocsuccess',
+                        blockType: Scratch.BlockType.REPORTER,
+                        text: "Success fetching iss' station position?"
                     },
                     {
                         opcode: 'resvar',
@@ -51,26 +58,39 @@ Object.freeze(__OPENNOTIFY_SCRATCHEXT__DEFAULTCONF);
                         blockType: Scratch.BlockType.REPORTER,
                         text: "Get raw station data"
                     },
+                    {
+                        opcode: 'latstationloc',
+                        blockType: Scratch.BlockType.REPORTER,
+                        text: "Get latitude of iss' station position"
+                    },
                 ]
             };
         }
-        resvar(){
+        resvar() {
             apistore = __OPENNOTIFY_SCRATCHEXT__DEFAULTCONF
         }
-        setwebpoint(args, utils){
+        setwebpoint(args, utils) {
             apistore.point = args.SPOINT.toString()
         }
         fetchstationloc() {
-            let fdata = {success:false}
+            let fdata = apistore.internal.fdataFallback
             try {
-          if (Scratch.canFetch(`${apistore.point}/iss-now.json`)) fetch(`${apistore.point}/iss-now.json`).then((res)=>fdata = res.json())
-            } finally{}
-          apistore.fdatas.stationloc = fdata
+                if (Scratch.canFetch(`${apistore.point}/iss-now.json`)) fetch(`${apistore.point}/iss-now.json`).then((res) => fdata = res.json())
+            } finally {
+                apistore.fdatas.stationloc = fdata
+            }
         }
-        rawstationloc(){
-            return apistore.fdatas.stationloc||{success:false}
+        fetchstationlocsuccess() {
+            return apistore.fdatas.stationloc.message === "success"
         }
-        
-    } 
-    Scratch.extensions.register(new AstronautsApi());
+        rawstationloc() {
+            return apistore.fdatas.stationloc || apistore.internal.fdataFallback
+        }
+        latstationloc() {
+            if (!this.fetchstationlocsuccess()) return ''
+            return apistore.fdatas.stationloc.iss_position.latitude
+        }
+
+    }
+    Scratch.extensions.register(new OpenNotifyApi());
 })
