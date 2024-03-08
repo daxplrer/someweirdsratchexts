@@ -1,6 +1,6 @@
-
+// Garbo, just please make a cors params for this script, i cant fetch open notify without JSONP
 var __OPENNOTIFY_SCRATCHEXT__DEFAULTCONF = {
-    point: 'http://open-notify.org',
+    point: 'https://open-notify.org',
     fdatas: {
         stationloc: undefined,
         astronauts: undefined
@@ -17,20 +17,25 @@ Object.freeze(__OPENNOTIFY_SCRATCHEXT__DEFAULTCONF);
     }
     const vm = Scratch.vm;
     const rt = vm.runtime
-    let apistore = __OPENNOTIFY_SCRATCHEXT__DEFAULTCONF
+    let apistore = {}
+    function resetapistore(){
+        apistore = JSON.parse(JSON.stringify(__OPENNOTIFY_SCRATCHEXT__DEFAULTCONF))
+    }
+    resetapistore()
     class OpenNotifyApi {
-        constructor() {
-            rt.on('BEFORE_EXECUTE', () => apistore = __OPENNOTIFY_SCRATCHEXT__DEFAULTCONF)
-        }
+        // constructor() {
+        //     rt.on('BEFORE_EXECUTE', () => apistore = __OPENNOTIFY_SCRATCHEXT__DEFAULTCONF)
+        // }
         getInfo() {
             return {
                 id: 'opennotifyapiext',
                 name: 'Open Notify Api',
                 blocks: [
+                    '--- data related ---',
                     {
                         opcode: 'setwebpoint',
                         blockType: Scratch.BlockType.COMMAND,
-                        text: 'Set web starting point to',
+                        text: 'Set web starting point to [SPOINT]',
                         arguments: {
                             SPOINT: {
                                 type: Scratch.ArgumentType.STRING,
@@ -66,25 +71,20 @@ Object.freeze(__OPENNOTIFY_SCRATCHEXT__DEFAULTCONF);
                 ]
             };
         }
-        resvar() {
-            apistore = __OPENNOTIFY_SCRATCHEXT__DEFAULTCONF
-        }
+        resvar = resetapistore
         setwebpoint(args, utils) {
-            apistore.point = args.SPOINT.toString()
+            apistore.point = args.SPOINT.toString()||__OPENNOTIFY_SCRATCHEXT__DEFAULTCONF.point
         }
-        fetchstationloc() {
+        async fetchstationloc() {
             let fdata = apistore.internal.fdataFallback
-            try {
-                if (Scratch.canFetch(`${apistore.point}/iss-now.json`)) fetch(`${apistore.point}/iss-now.json`).then((res) => fdata = res.json())
-            } finally {
-                apistore.fdatas.stationloc = fdata
-            }
+            fdata = await fetch(`${apistore.point}/iss-now.json`)
+            fdata = fdata.json()||apistore.internal.fdataFallback
         }
         fetchstationlocsuccess() {
             return apistore.fdatas.stationloc.message === "success"
         }
         rawstationloc() {
-            return apistore.fdatas.stationloc || apistore.internal.fdataFallback
+            return JSON.stringify(apistore.fdatas.stationloc || apistore.internal.fdataFallback)
         }
         latstationloc() {
             if (!this.fetchstationlocsuccess()) return ''
@@ -93,4 +93,4 @@ Object.freeze(__OPENNOTIFY_SCRATCHEXT__DEFAULTCONF);
 
     }
     Scratch.extensions.register(new OpenNotifyApi());
-})
+})(Scratch);
