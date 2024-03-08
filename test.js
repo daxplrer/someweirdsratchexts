@@ -17,7 +17,7 @@ Object.freeze(__OPENNOTIFY_SCRATCHEXT__DEFAULTCONF);
     }
     const vm = Scratch.vm;
     const rt = vm.runtime
-    apistore = __OPENNOTIFY_SCRATCHEXT__DEFAULTCONF
+    let apistore = __OPENNOTIFY_SCRATCHEXT__DEFAULTCONF
     class OpenNotifyApi {
         constructor() {
             rt.on('BEFORE_EXECUTE', () => apistore = __OPENNOTIFY_SCRATCHEXT__DEFAULTCONF)
